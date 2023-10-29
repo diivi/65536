@@ -25,6 +25,7 @@ TILE_COLORS = {
 
 # utility functions
 
+
 def get_direction_text(direction):
     return "up" if direction == 0 else "right" if direction == 1 else "down" if direction == 2 else "left" if direction == 3 else direction
 
@@ -74,104 +75,85 @@ class Game:
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
                 # draw the tile
-                pygame.draw.rect(self.window, TILE_COLORS[self.grid[i][j]], (j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+                pygame.draw.rect(self.window, TILE_COLORS[self.grid[i][j]], (
+                    j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE))
 
                 # add the text to the tile
-                text = self.font.render(str(self.grid[i][j]) if self.grid[i][j] else "", True, (119, 110, 101))
+                text = self.font.render(
+                    str(self.grid[i][j]) if self.grid[i][j] else "", True, (119, 110, 101))
                 text_rect = text.get_rect()
-                text_rect.center = (j * TILE_SIZE + TILE_SIZE / 2, i * TILE_SIZE + TILE_SIZE / 2)
+                text_rect.center = (
+                    j * TILE_SIZE + TILE_SIZE / 2, i * TILE_SIZE + TILE_SIZE / 2)
                 self.window.blit(text, text_rect)
 
                 # add a border around the tiles
-                pygame.draw.rect(self.window, (187, 173, 160), (j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE), 5)
+                pygame.draw.rect(self.window, (187, 173, 160), (j *
+                                 TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE), 5)
 
         pygame.display.update()
 
     def move(self, direction):
         # direction: 0 - up, 1 - right, 2 - down, 3 - left
-        # slide the tiles in the given direction
+        # slide the tiles in the given direction, merging tiles of the same value once.
         merged = [[False for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
         initial_grid = [row[:] for row in self.grid]
 
-        # Slide tiles as far as possible in the given direction, merging tiles of the same value once.
+        # Determine the order in which to iterate over the tiles
         if direction == 0:
-            for i in range(GRID_SIZE):
-                for j in range(GRID_SIZE):
-                    shift = 0
-                    for k in range(i): # k checks all tiles between i and 0
-                        if self.grid[k][j] == 0:
-                            shift += 1
-                    
-                    if shift:
-                        self.grid[i - shift][j] = self.grid[i][j]
-                        self.grid[i][j] = 0
-
-                    if i - shift - 1 >= 0 and self.grid[i - shift - 1][j] == self.grid[i - shift][j] and not merged[i - shift - 1][j] and not merged[i - shift][j]:
-                        self.score += self.grid[i - shift][j] * 2
-                        self.grid[i - shift - 1][j] *= 2
-                        self.grid[i - shift][j] = 0
-                        merged[i - shift - 1][j] = True
-
+            tiles = [(i, j) for j in range(GRID_SIZE) for i in range(GRID_SIZE) if self.grid[i][j] > 0]
         elif direction == 1:
-            for i in range(GRID_SIZE):
-                for j in range(GRID_SIZE - 1, -1, -1):
-                    shift = 0
-                    for k in range(j + 1, GRID_SIZE):
-                        if self.grid[i][k] == 0:
-                            shift += 1
-
-                    if shift:
-                        self.grid[i][j + shift] = self.grid[i][j]
-                        self.grid[i][j] = 0
-
-                    if j + shift + 1 < GRID_SIZE and self.grid[i][j + shift + 1] == self.grid[i][j + shift] and not merged[i][j + shift + 1] and not merged[i][j + shift]:
-                        self.score += self.grid[i][j + shift] * 2
-                        self.grid[i][j + shift + 1] *= 2
-                        self.grid[i][j + shift] = 0
-                        merged[i][j + shift + 1] = True
-
+            tiles = [(i, j) for i in range(GRID_SIZE) for j in range(GRID_SIZE - 1, -1, -1) if self.grid[i][j] > 0]
         elif direction == 2:
-            for i in range(GRID_SIZE - 1, -1, -1):
-                for j in range(GRID_SIZE):
-                    shift = 0
-                    for k in range(i + 1, GRID_SIZE):
-                        if self.grid[k][j] == 0:
-                            shift += 1
-
-                    if shift:
-                        self.grid[i + shift][j] = self.grid[i][j]
-                        self.grid[i][j] = 0
-
-                    if i + shift + 1 < GRID_SIZE and self.grid[i + shift + 1][j] == self.grid[i + shift][j] and not merged[i + shift + 1][j] and not merged[i + shift][j]:
-                        self.score += self.grid[i + shift][j] * 2
-                        self.grid[i + shift + 1][j] *= 2
-                        self.grid[i + shift][j] = 0
-                        merged[i + shift + 1][j] = True
-
+            tiles = [(i, j) for j in range(GRID_SIZE) for i in range(GRID_SIZE - 1, -1, -1) if self.grid[i][j] > 0]
         elif direction == 3:
-            for i in range(GRID_SIZE):
-                for j in range(GRID_SIZE):
-                    shift = 0
-                    for k in range(j):
-                        if self.grid[i][k] == 0:
-                            shift += 1
+            tiles = [(i, j) for i in range(GRID_SIZE) for j in range(GRID_SIZE) if self.grid[i][j] > 0]
 
-                    if shift:
-                        self.grid[i][j - shift] = self.grid[i][j]
-                        self.grid[i][j] = 0
-
-                    if j - shift - 1 >= 0 and self.grid[i][j - shift - 1] == self.grid[i][j - shift] and not merged[i][j - shift - 1] and not merged[i][j - shift]:
-                        self.score += self.grid[i][j - shift] * 2
-                        self.grid[i][j - shift - 1] *= 2
-                        self.grid[i][j - shift] = 0
-                        merged[i][j - shift - 1] = True
+        # Slide tiles as far as possible in the given direction, merging tiles of the same value once.
+        for i, j in tiles:
+            value = self.grid[i][j]
+            if direction == 0:
+                while i > 0 and self.grid[i - 1][j] == 0:
+                    self.grid[i - 1][j] = value
+                    self.grid[i][j] = 0
+                    i -= 1
+                if i > 0 and self.grid[i - 1][j] == value and not merged[i - 1][j]:
+                    self.grid[i - 1][j] *= 2
+                    self.grid[i][j] = 0
+                    merged[i - 1][j] = True
+                    self.score += value * 2
+            elif direction == 1:
+                while j < GRID_SIZE - 1 and self.grid[i][j + 1] == 0:
+                    self.grid[i][j + 1] = value
+                    self.grid[i][j] = 0
+                    j += 1
+                if j < GRID_SIZE - 1 and self.grid[i][j + 1] == value and not merged[i][j + 1]:
+                    self.grid[i][j + 1] *= 2
+                    self.grid[i][j] = 0
+                    merged[i][j + 1] = True
+                    self.score += value * 2
+            elif direction == 2:
+                while i < GRID_SIZE - 1 and self.grid[i + 1][j] == 0:
+                    self.grid[i + 1][j] = value
+                    self.grid[i][j] = 0
+                    i += 1
+                if i < GRID_SIZE - 1 and self.grid[i + 1][j] == value and not merged[i + 1][j]:
+                    self.grid[i + 1][j] *= 2
+                    self.grid[i][j] = 0
+                    merged[i + 1][j] = True
+                    self.score += value * 2
+            elif direction == 3:
+                while j > 0 and self.grid[i][j - 1] == 0:
+                    self.grid[i][j - 1] = value
+                    self.grid[i][j] = 0
+                    j -= 1
+                if j > 0 and self.grid[i][j - 1] == value and not merged[i][j - 1]:
+                    self.grid[i][j - 1] *= 2
+                    self.grid[i][j] = 0
+                    merged[i][j - 1] = True
+                    self.score += value * 2
 
         if self.grid != initial_grid:
             self.add_random_tile()
-            # print("Game State after moving " + get_direction_text(direction) + ":")
-            # print(str(self))
-            # print("Score: " + str(self.score))
-            # print()
             if self.check_game_over():
                 if self.gui:
                     pygame.time.delay(5000)
@@ -182,7 +164,7 @@ class Game:
             return (0, self.grid)
         else:
             return (2, self.grid)
-
+    
     def check_game_over(self):
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
@@ -205,10 +187,10 @@ class Game:
             self.window.blit(text, text_rect)
             pygame.display.update()
         return True
-        
 
     def __str__(self):
         return "\n".join([" ".join([str(self.grid[i][j]) for j in range(GRID_SIZE)]) for i in range(GRID_SIZE)])
+
 
 def check_monotonicity(grid):
     mono_score = 0
@@ -256,6 +238,7 @@ def check_monotonicity(grid):
 
     score = mono_score + empty_score
     return score
+
 
 def get_next_states(grid, depth, game_monotonicty):
     """
@@ -321,8 +304,9 @@ def get_next_states(grid, depth, game_monotonicty):
                 curr_result["loss"] = max(game_monotonicty - heuristic, 0)
             else:
                 # get the next states for this grid
-                next_states = get_next_states(game_copy.grid, depth - 1, game_monotonicty)
-                best_state = choose_best_state(next_states, game_monotonicty)               
+                next_states = get_next_states(
+                    game_copy.grid, depth - 1, game_monotonicty)
+                best_state = choose_best_state(next_states, game_monotonicty)
 
                 curr_result["heuristic"] = best_state["heuristic"]
                 curr_result["probability"] = best_state["probability"]
@@ -333,13 +317,16 @@ def get_next_states(grid, depth, game_monotonicty):
             # // so assume the worst case scenario.
             if result["heuristic"] == -1 or curr_result["heuristic"] < result["heuristic"]:
                 result["heuristic"] = curr_result["heuristic"]
-                result["probability"] = curr_result["probability"] / len(available_cells)
+                result["probability"] = curr_result["probability"] / \
+                    len(available_cells)
             elif curr_result["heuristic"] == result["heuristic"]:
-                result["probability"] += curr_result["probability"] / len(available_cells)
-                
+                result["probability"] += curr_result["probability"] / \
+                    len(available_cells)
+
         results[direction] = result
 
     return results
+
 
 def choose_best_state(next_states, original_monotonicity):
     best_state = None
@@ -359,21 +346,10 @@ def choose_best_state(next_states, original_monotonicity):
 
     return best_state
 
+
 Sum = 0
 Max = 0
 Max_game = None
-_2prob = 0
-_4prob = 0
-_8prob = 0
-_16prob = 0
-_32prob = 0
-_64prob = 0
-_128prob = 0
-_256prob = 0
-_512prob = 0
-_1024prob = 0
-_2048prob = 0
-_4096prob = 0
 
 init_time = time.time()
 for i in range(1):
@@ -394,51 +370,3 @@ for i in range(1):
 
         game.move(best_state["direction"])
         print(str(game), end="\n\n")
-
-    
-#     Sum += score
-#     if score > Max:
-#         Max = score
-#         Max_game = grid
-#     if any(4096 in row for row in grid):
-#         _4096prob += 1
-#     if any(2048 in row for row in grid):
-#         _2048prob += 1
-#     if any(1024 in row for row in grid):
-#         _1024prob += 1
-#     if any(512 in row for row in grid):
-#         _512prob += 1
-#     if any(256 in row for row in grid):
-#         _256prob += 1
-#     if any(128 in row for row in grid):
-#         _128prob += 1
-#     if any(64 in row for row in grid):
-#         _64prob += 1
-#     if any(32 in row for row in grid):
-#         _32prob += 1
-#     if any(16 in row for row in grid):
-#         _16prob += 1
-#     if any(8 in row for row in grid):
-#         _8prob += 1
-#     if any(4 in row for row in grid):
-#         _4prob += 1
-#     if any(2 in row for row in grid):
-#         _2prob += 1
-
-# print("Time taken (s): " + str(time.time() - init_time))
-
-# print("Average Score: " + str(Sum / 100))
-# print("Max Score: " + str(Max))
-# print("Best Game:\n", str(Max_game))
-# print("2: " + str(_2prob/100))
-# print("4: " + str(_4prob/100))
-# print("8: " + str(_8prob/100))
-# print("16: " + str(_16prob/100))
-# print("32: " + str(_32prob/100))
-# print("64: " + str(_64prob/100))
-# print("128: " + str(_128prob/100))
-# print("256: " + str(_256prob/100))
-# print("512: " + str(_512prob/100))
-# print("1024: " + str(_1024prob/100))
-# print("2048: " + str(_2048prob/100))
-# print("4096: " + str(_4096prob/100))
