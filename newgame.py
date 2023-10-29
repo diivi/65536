@@ -207,7 +207,7 @@ class Game:
         return True
         
 
-    def _str_(self):
+    def __str__(self):
         return "\n".join([" ".join([str(self.grid[i][j]) for j in range(GRID_SIZE)]) for i in range(GRID_SIZE)])
 
 def check_monotonicity(grid):
