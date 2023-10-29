@@ -43,7 +43,7 @@ class Game:
             self.gui = False
         self.score = 0
         if grid:
-            self.grid = grid
+            self.grid = copy.deepcopy(grid)
         else:
             self.reset()
 
@@ -68,7 +68,7 @@ class Game:
                 if self.grid[i][j] == 0:
                     empty_tiles.append((i, j))
         if empty_tiles:
-            i, j = random.choice(empty_tiles)
+            i, j = empty_tiles[random.randint(0, len(empty_tiles) - 1)]
             self.grid[i][j] = 2 if random.random() < 0.9 else 4
 
     def render(self):
@@ -194,47 +194,40 @@ class Game:
 
 def check_monotonicity(grid):
     mono_score = 0
-    prev_value = -1
-    inc_score = 0
-    dec_score = 0
-
-    def score_cell(cell_loc):
-        nonlocal prev_value
-        nonlocal inc_score
-        nonlocal dec_score
-        tile = grid[cell_loc[0]][cell_loc[1]]
-        tile_value = tile
-        inc_score += tile_value
-        if tile_value <= prev_value or prev_value == -1:
-            dec_score += tile_value
-            if tile_value < prev_value:
-                inc_score -= prev_value
-        prev_value = tile_value
-
+    empty_score = 0
     for i in range(GRID_SIZE):
-        prev_value = -1
         inc_score = 0
         dec_score = 0
+        prev_value = -1
         for j in range(GRID_SIZE):
-            score_cell((i, j))
+            tile_value = grid[i][j]
+            if tile_value == 0:
+                empty_score += 8
+            else:
+                inc_score += tile_value
+                if tile_value <= prev_value or prev_value == -1:
+                    dec_score += tile_value
+                    if tile_value < prev_value:
+                        inc_score -= prev_value
+                prev_value = tile_value
         mono_score += max(inc_score, dec_score)
 
     for j in range(GRID_SIZE):
-        prev_value = -1
         inc_score = 0
         dec_score = 0
+        prev_value = -1
         for i in range(GRID_SIZE):
-            score_cell((i, j))
+            tile_value = grid[i][j]
+            if tile_value == 0:
+                empty_score += 8
+            else:
+                inc_score += tile_value
+                if tile_value <= prev_value or prev_value == -1:
+                    dec_score += tile_value
+                    if tile_value < prev_value:
+                        inc_score -= prev_value
+                prev_value = tile_value
         mono_score += max(inc_score, dec_score)
-
-    available_cells = []
-    for i in range(GRID_SIZE):
-        for j in range(GRID_SIZE):
-            if grid[i][j] == 0:
-                available_cells.append((i, j))
-    empty_cell_weight = 8
-
-    empty_score = len(available_cells) * empty_cell_weight
 
     score = mono_score + empty_score
     return score
@@ -248,7 +241,7 @@ def get_next_states(grid, depth, game_monotonicty):
     results = [None for _ in range(4)]
 
     for direction in range(4):
-        game_copy = Game(gui=False, grid=copy.deepcopy(grid))
+        game_copy = Game(gui=False, grid=grid)
         result, grid = game_copy.move(direction)
 
         if result == 2:
@@ -312,9 +305,9 @@ def get_next_states(grid, depth, game_monotonicty):
                 curr_result["probability"] = best_state["probability"]
                 curr_result["loss"] = best_state["loss"]
 
-            # // Compare this grid quality to the grid quality for other tile spawn locations.
-            # // Take the WORST quality since we have no control over where the tile spawns,
-            # // so assume the worst case scenario.
+            #  Compare this grid quality to the grid quality for other tile spawn locations.
+            #  Take the WORST quality since we have no control over where the tile spawns,
+            #  so assume the worst case scenario.
             if result["heuristic"] == -1 or curr_result["heuristic"] < result["heuristic"]:
                 result["heuristic"] = curr_result["heuristic"]
                 result["probability"] = curr_result["probability"] / \
@@ -363,6 +356,7 @@ for i in range(1):
         print(game_monotonicty, end="\n\n")
 
         next_states = get_next_states(game.grid, 3, game_monotonicty)
+        print("Generated States:", end="\n\n")
         print(next_states, end="\n\n")
         best_state = choose_best_state(next_states, game_monotonicty)
         print(best_state, end="\n\n")
