@@ -100,13 +100,17 @@ class Game:
 
         # Determine the order in which to iterate over the tiles
         if direction == 0:
-            tiles = [(i, j) for j in range(GRID_SIZE) for i in range(GRID_SIZE) if self.grid[i][j] > 0]
+            tiles = [(i, j) for j in range(GRID_SIZE)
+                     for i in range(GRID_SIZE) if self.grid[i][j] > 0]
         elif direction == 1:
-            tiles = [(i, j) for i in range(GRID_SIZE) for j in range(GRID_SIZE - 1, -1, -1) if self.grid[i][j] > 0]
+            tiles = [(i, j) for i in range(GRID_SIZE)
+                     for j in range(GRID_SIZE - 1, -1, -1) if self.grid[i][j] > 0]
         elif direction == 2:
-            tiles = [(i, j) for j in range(GRID_SIZE) for i in range(GRID_SIZE - 1, -1, -1) if self.grid[i][j] > 0]
+            tiles = [(i, j) for j in range(GRID_SIZE)
+                     for i in range(GRID_SIZE - 1, -1, -1) if self.grid[i][j] > 0]
         elif direction == 3:
-            tiles = [(i, j) for i in range(GRID_SIZE) for j in range(GRID_SIZE) if self.grid[i][j] > 0]
+            tiles = [(i, j) for i in range(GRID_SIZE)
+                     for j in range(GRID_SIZE) if self.grid[i][j] > 0]
 
         # Slide tiles as far as possible in the given direction, merging tiles of the same value once.
         for i, j in tiles:
@@ -164,7 +168,7 @@ class Game:
             return (0, self.grid)
         else:
             return (2, self.grid)
-    
+
     def check_game_over(self):
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
@@ -257,10 +261,15 @@ def get_next_states(grid, depth, game_monotonicty):
 
         # get all available cells where a 2 can be spawned
         available_cells = []
+        # max_tile = 0
+        # max_tile_loc = None
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
                 if grid[i][j] == 0:
                     available_cells.append((i, j))
+                # elif grid[i][j] > max_tile:
+                #     max_tile = grid[i][j]
+                #     max_tile_loc = (i, j)
 
         for cell_loc in available_cells:
             # if there is space between this empty cell and the nearest tile that we have placed, we don't need to check this location. The worst case is when the new 2 is spawned next to the nearest tile, since we have less space to work with. Let's collect the worst case scenarios:
@@ -280,7 +289,7 @@ def get_next_states(grid, depth, game_monotonicty):
                 continue
 
             # create a game duplicate and spawn a 2 in this location
-            game_copy = Game(gui=False, grid=copy.deepcopy(grid))
+            game_copy = Game(gui=False, grid=grid)
             game_copy.grid[cell_loc[0]][cell_loc[1]] = 2
 
             curr_result = {
