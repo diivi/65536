@@ -199,68 +199,14 @@ class Game:
     def __str__(self):
         return "\n".join([" ".join([str(self.grid[i][j]) for j in range(GRID_SIZE)]) for i in range(GRID_SIZE)])
     
-# def random_policy(game):
-#     game_copy = copy.deepcopy(game)
-#     while not game_copy.check_game_over():
-#         game_copy.move(random.randint(0, 3))
-#     return game_copy.score, max(max(row) for row in game_copy.grid)
-
-def monotonicity(game):
-    monotonicity = 0
-    for i in range(4):
-        for j in range(4):
-            if i == 0 and j == 0:
-                continue
-            if i == 0:
-                monotonicity += game.grid[i][j] - game.grid[i][j - 1]
-            elif j == 0:
-                monotonicity += game.grid[i][j] - game.grid[i - 1][j]
-            else:
-                monotonicity += abs(game.grid[i][j] - game.grid[i - 1][j]) + abs(game.grid[i][j] - game.grid[i][j - 1])
-    return monotonicity
-
-def monotonicity(game):
-    monotonicity = 0
-    for i in range(4):
-        for j in range(4):
-            if i == 0 and j == 0:
-                continue
-            if i == 0:
-                monotonicity += game.grid[i][j] - game.grid[i][j - 1]
-            elif j == 0:
-                monotonicity += game.grid[i][j] - game.grid[i - 1][j]
-            else:
-                monotonicity += abs(game.grid[i][j] - game.grid[i - 1][j]) + abs(game.grid[i][j] - game.grid[i][j - 1])
-    return monotonicity
 
 def random_policy(game):
     game_copy = copy.deepcopy(game)
-    status = True
     while not game_copy.check_game_over():
-        max_tile = 0
-        if status:
-            max_tile = max(max(row) for row in game_copy.grid)
-
-        if max_tile < 512:
-            game_copy.move(random.randint(0, 3))
-        else:
-            status = False
-        
-        if not status:
-            mono_decisions = []
-            for i in range(4):
-                game_copy_temp = copy.deepcopy(game_copy)
-                result, grid = game_copy_temp.move(i)
-                monotonicity_score = monotonicity(game_copy_temp)
-                mono_decisions.append({"move": i, "monotonicity": monotonicity_score})
-            
-            best_move = max(mono_decisions, key=lambda x: x["monotonicity"])["move"]
-            game_copy.move(best_move)
-
+        game_copy.move(random.randint(0, 3))
     return game_copy.score, max(max(row) for row in game_copy.grid)
 
 def mcts(initial_game):
-    # urdl_score_max_tile = [0, 0, 0, 0]
     urdl_score = [0, 0, 0, 0]
 
     for move in range(4):
@@ -271,7 +217,7 @@ def mcts(initial_game):
             continue
 
         # try random policy for 100 games
-        for i in range(81):
+        for i in range(100):
             output = random_policy(game_copy)
 
             urdl_score[move] += output[0]
@@ -290,11 +236,13 @@ def monte_carlo_simulation(initial_game):
     iterations = 1
     while not game.check_game_over():
         mcts(game)
+        print(game.grid)
         iterations += 1
 
     print("Final State:\n", str(game))
     print("Score: " + str(game.score))
     print("Max Tile: " + str(max(max(row) for row in game.grid)))
+    print("Iterations: " + str(iterations))
 
     return game.score, max(max(row) for row in game.grid), game.grid
     
@@ -314,6 +262,41 @@ _512prob = 0
 _1024prob = 0
 _2048prob = 0
 _4096prob = 0
+
+def game_reader(file):
+    with open(file, "r") as f:
+        lines = f.readlines()
+        grid = []
+        for line in lines:
+            grid.append([int(x) for x in line.split()])
+        print(grid)
+        return grid
+
+def play_gui(file):
+    game = Game(gui=True, grid= game_reader(file))
+    game.render()
+    while not game.check_game_over():
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    game.move(0)
+                elif event.key == pygame.K_RIGHT:
+                    game.move(1)
+                elif event.key == pygame.K_DOWN:
+                    game.move(2)
+                elif event.key == pygame.K_LEFT:
+                    game.move(3)
+
+    pygame.time.delay(5000)
+    pygame.quit()
+
+
+# play_gui("1.2048")
+
+# exit()
 
 init_time = time.time()
 for i in range(1):
@@ -350,7 +333,7 @@ for i in range(1):
 
 print("\nTime taken (s): " + str(time.time() - init_time))
 
-print("\ncAverage Score: " + str(Sum / 100))
+print("\nAverage Score: " + str(Sum / 100))
 print("Max Score: " + str(Max))
 print("Best Game:\n", str(Max_game))
 print("2: " + str(_2prob/100))
