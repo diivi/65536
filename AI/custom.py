@@ -210,154 +210,28 @@ class Game:
     def __str__(self):
         return "\n".join([" ".join([str(self.grid[i][j]) for j in range(GRID_SIZE)]) for i in range(GRID_SIZE)])
 
-def check_monotonicity(grid):
-    mono_score = 0
-    prev_value = -1
-    inc_score = 0
-    dec_score = 0
+prev_move = -1
+def move_available(game, move):
+    game_copy = copy.deepcopy(game)
+    game_copy.move(move)
+    if game_copy.grid == game.grid:
+        return False
+    return True
 
-    def score_cell(cell_loc):
-        nonlocal prev_value
-        nonlocal inc_score
-        nonlocal dec_score
-        tile = grid[cell_loc[0]][cell_loc[1]]
-        tile_value = tile
-        inc_score += tile_value
-        if tile_value <= prev_value or prev_value == -1:
-            dec_score += tile_value
-            if tile_value < prev_value:
-                inc_score -= prev_value
-        prev_value = tile_value
+def next_move(game):
+    global prev_move
+    move = 0
+    if move == prev_move:
+        move = 3
+    if not move_available(game, move):
+        priority = [0,3,2,1]
+        for i in priority:
+            move = i
+            if move_available(game, move):
+                break
+    prev_move = move
+    return move
 
-    for i in range(GRID_SIZE):
-        prev_value = -1
-        inc_score = 0
-        dec_score = 0
-        for j in range(GRID_SIZE):
-            score_cell((i, j))
-        mono_score += max(inc_score, dec_score)
-
-    for j in range(GRID_SIZE):
-        prev_value = -1
-        inc_score = 0
-        dec_score = 0
-        for i in range(GRID_SIZE):
-            score_cell((i, j))
-        mono_score += max(inc_score, dec_score)
-
-    available_cells = []
-    for i in range(GRID_SIZE):
-        for j in range(GRID_SIZE):
-            if grid[i][j] == 0:
-                available_cells.append((i, j))
-    empty_cell_weight = 8
-
-    empty_score = len(available_cells) * empty_cell_weight
-
-    score = mono_score + empty_score
-    return score
-
-def get_next_states(grid, depth, game_monotonicty):
-    """
-    Plans a few moves ahead and returns the worst-case scenario grid quality,
-    and the probability of that occurring, for each move
-    """
-    results = [None for _ in range(4)]
-
-    for direction in range(4):
-        game_copy = Game(gui=False, grid=copy.deepcopy(grid))
-        result, grid = game_copy.move(direction)
-
-        if result == 2:
-            continue
-
-        # Spawn a 2 in all possible locations.
-        result = {
-            "heuristic": -1,
-            "probability": 1,
-            "loss": 0,
-            "direction": direction
-        }
-
-        # get all available cells where a 2 can be spawned
-        available_cells = []
-        for i in range(GRID_SIZE):
-            for j in range(GRID_SIZE):
-                if grid[i][j] == 0:
-                    available_cells.append((i, j))
-
-        for cell_loc in available_cells:
-            # if there is space between this empty cell and the nearest tile that we have placed, we don't need to check this location. The worst case is when the new 2 is spawned next to the nearest tile, since we have less space to work with. Let's collect the worst case scenarios:
-            has_adjacent_tile = False
-
-            # check if there is a tile lrud
-            if cell_loc[0] > 0 and grid[cell_loc[0] - 1][cell_loc[1]] != 0:
-                has_adjacent_tile = True
-            if cell_loc[0] < GRID_SIZE - 1 and grid[cell_loc[0] + 1][cell_loc[1]] != 0:
-                has_adjacent_tile = True
-            if cell_loc[1] > 0 and grid[cell_loc[0]][cell_loc[1] - 1] != 0:
-                has_adjacent_tile = True
-            if cell_loc[1] < GRID_SIZE - 1 and grid[cell_loc[0]][cell_loc[1] + 1] != 0:
-                has_adjacent_tile = True
-
-            if not has_adjacent_tile:
-                continue
-
-            # create a game duplicate and spawn a 2 in this location
-            game_copy = Game(gui=False, grid=copy.deepcopy(grid))
-            game_copy.grid[cell_loc[0]][cell_loc[1]] = 2
-
-            curr_result = {
-                "heuristic": -1,
-                "probability": 1,
-                "loss": 0,
-                "direction": direction
-            }
-            if depth == 0:
-                # calculate the heuristic for this grid
-                heuristic = check_monotonicity(game_copy.grid)
-                curr_result["heuristic"] = heuristic
-                curr_result["probability"] = 1
-                curr_result["loss"] = max(game_monotonicty - heuristic, 0)
-            else:
-                # get the next states for this grid
-                next_states = get_next_states(game_copy.grid, depth - 1, game_monotonicty)
-                best_state = choose_best_state(next_states, game_monotonicty)               
-
-                curr_result["heuristic"] = best_state["heuristic"]
-                curr_result["probability"] = best_state["probability"]
-                curr_result["loss"] = best_state["loss"]
-
-            # // Compare this grid quality to the grid quality for other tile spawn locations.
-            # // Take the WORST quality since we have no control over where the tile spawns,
-            # // so assume the worst case scenario.
-            if result["heuristic"] == -1 or curr_result["heuristic"] < result["heuristic"]:
-                result["heuristic"] = curr_result["heuristic"]
-                result["probability"] = curr_result["probability"] / len(available_cells)
-            elif curr_result["heuristic"] == result["heuristic"]:
-                result["probability"] += curr_result["probability"] / len(available_cells)
-                
-        results[direction] = result
-
-    return results
-
-def choose_best_state(next_states, original_monotonicity):
-    best_state = None
-    for next_state in next_states:
-        if not next_state:
-            continue
-        if not best_state or next_state["loss"] < best_state["loss"] or (next_state["loss"] == best_state["loss"] and next_state["heuristic"] > best_state["heuristic"]) or (next_state["loss"] == best_state["loss"] and next_state["heuristic"] == best_state["heuristic"] and next_state["probability"] > best_state["probability"]):
-            best_state = next_state
-
-    if not best_state:
-        best_state = {
-            "heuristic": -1,
-            "probability": 1,
-            "loss": -original_monotonicity,
-            "direction": 0
-        }
-
-    return best_state
 
 Sum = 0
 Max = 0
@@ -383,17 +257,12 @@ for i in range(1):
     print(str(game), end="\n\n")
 
     while not game.check_game_over():
-        game_monotonicty = check_monotonicity(game.grid)
-        print(game_monotonicty, end="\n\n")
-
-        next_states = get_next_states(game.grid, 3, game_monotonicty)
-        print(next_states, end="\n\n")
-        best_state = choose_best_state(next_states, game_monotonicty)
-        print(best_state, end="\n\n")
-        print(get_direction_text(best_state["direction"]), end="\n\n")
-
-        game.move(best_state["direction"])
+        game.move(next_move(game))
+        print("Score: " + str(game.score))
+        print()
         print(str(game), end="\n\n")
+
+    print("Time taken (s): " + str(time.time() - init_time))
 
     
 #     Sum += score

@@ -2,6 +2,7 @@ import pygame
 import random
 import copy
 import time
+import math
 
 # Define some constants for the game
 GRID_SIZE = 4
@@ -24,6 +25,7 @@ TILE_COLORS = {
 }
 
 # utility functions
+
 
 def get_direction_text(direction):
     return "up" if direction == 0 else "right" if direction == 1 else "down" if direction == 2 else "left" if direction == 3 else direction
@@ -67,16 +69,20 @@ class Game:
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
                 # draw the tile
-                pygame.draw.rect(self.window, TILE_COLORS[self.grid[i][j]], (j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+                pygame.draw.rect(self.window, TILE_COLORS[self.grid[i][j]], (
+                    j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE))
 
                 # add the text to the tile
-                text = self.font.render(str(self.grid[i][j]) if self.grid[i][j] else "", True, (119, 110, 101))
+                text = self.font.render(
+                    str(self.grid[i][j]) if self.grid[i][j] else "", True, (119, 110, 101))
                 text_rect = text.get_rect()
-                text_rect.center = (j * TILE_SIZE + TILE_SIZE / 2, i * TILE_SIZE + TILE_SIZE / 2)
+                text_rect.center = (
+                    j * TILE_SIZE + TILE_SIZE / 2, i * TILE_SIZE + TILE_SIZE / 2)
                 self.window.blit(text, text_rect)
 
                 # add a border around the tiles
-                pygame.draw.rect(self.window, (187, 173, 160), (j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE), 5)
+                pygame.draw.rect(self.window, (187, 173, 160), (j *
+                                 TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE), 5)
 
         pygame.display.update()
 
@@ -91,10 +97,10 @@ class Game:
             for i in range(GRID_SIZE):
                 for j in range(GRID_SIZE):
                     shift = 0
-                    for k in range(i): # k checks all tiles between i and 0
+                    for k in range(i):  # k checks all tiles between i and 0
                         if self.grid[k][j] == 0:
                             shift += 1
-                    
+
                     if shift:
                         self.grid[i - shift][j] = self.grid[i][j]
                         self.grid[i][j] = 0
@@ -194,74 +200,10 @@ class Game:
             self.window.blit(text, text_rect)
             pygame.display.update()
         return True
-        
 
     def __str__(self):
         return "\n".join([" ".join([str(self.grid[i][j]) for j in range(GRID_SIZE)]) for i in range(GRID_SIZE)])
-    
 
-def random_policy(game):
-    game_copy = copy.deepcopy(game)
-    while not game_copy.check_game_over():
-        game_copy.move(random.randint(0, 3))
-    return game_copy.score, max(max(row) for row in game_copy.grid)
-
-def mcts(initial_game):
-    urdl_score = [0, 0, 0, 0]
-
-    for move in range(4):
-        game_copy = copy.deepcopy(initial_game)
-        result, grid = game_copy.move(move)
-
-        if result == 2:
-            continue
-
-        # try random policy for 100 games
-        for i in range(100):
-            output = random_policy(game_copy)
-
-            urdl_score[move] += output[0]
-    
-    print(urdl_score)
-
-    best_move_by_score = urdl_score.index(max(urdl_score))
-
-    initial_game.move(best_move_by_score)
-    print(str(initial_game))
-    print("Score: " + str(initial_game.score))
-    print()
-
-def monte_carlo_simulation(initial_game):
-    game = copy.deepcopy(initial_game)
-    iterations = 1
-    while not game.check_game_over():
-        mcts(game)
-        print(game.grid)
-        iterations += 1
-
-    print("Final State:\n", str(game))
-    print("Score: " + str(game.score))
-    print("Max Tile: " + str(max(max(row) for row in game.grid)))
-    print("Iterations: " + str(iterations))
-
-    return game.score, max(max(row) for row in game.grid), game.grid
-    
-
-Sum = 0
-Max = 0
-Max_game = None
-_2prob = 0
-_4prob = 0
-_8prob = 0
-_16prob = 0
-_32prob = 0
-_64prob = 0
-_128prob = 0
-_256prob = 0
-_512prob = 0
-_1024prob = 0
-_2048prob = 0
-_4096prob = 0
 
 def game_reader(file):
     with open(file, "r") as f:
@@ -269,11 +211,11 @@ def game_reader(file):
         grid = []
         for line in lines:
             grid.append([int(x) for x in line.split()])
-        print(grid)
         return grid
 
+
 def play_gui(file):
-    game = Game(gui=True, grid= game_reader(file))
+    game = Game(gui=True, grid=game_reader(file))
     game.render()
     while not game.check_game_over():
         for event in pygame.event.get():
@@ -297,6 +239,132 @@ def play_gui(file):
 # play_gui("1.2048")
 
 # exit()
+
+# def random_policy(game):
+#     game_copy = copy.deepcopy(game)
+#     while not game_copy.check_game_over():
+#         game_copy.move(random.randint(0, 3))
+#     return game_copy.score, max(max(row) for row in game_copy.grid)
+
+prev_move = -1
+
+
+def move_available(game, move):
+    game_copy = copy.deepcopy(game)
+    game_copy.move(move)
+    if game_copy.grid == game.grid:
+        return False
+    return True
+
+
+def next_move(game):
+    global prev_move
+    move = 0
+    if move == prev_move:
+        move = 3
+    if not move_available(game, move):
+        priority = [0, 3, 1, 2]
+        for i in priority:
+            move = i
+            if move_available(game, move):
+                break
+    prev_move = move
+    return move
+
+
+def random_policy(game):
+    game_copy = copy.deepcopy(game)
+    weights = [2, 1, 2, 1]  # weights for each move
+    while not game_copy.check_game_over():
+        # make a weighted random choice of move
+        move = random.choices(range(4), weights=weights)[0]
+        old_score = game_copy.score
+        old_max = max(max(row) for row in game_copy.grid)
+        game_copy.move(move)
+        new_score = game_copy.score
+        new_max = max(max(row) for row in game_copy.grid)
+        # if the move resulted in a higher score or max value, increase its weight
+        if new_score > old_score or new_max > old_max:
+            weights[move] += 1
+    return game_copy.score, max(max(row) for row in game_copy.grid)
+
+
+def priority_policy(game):
+    game_copy = copy.deepcopy(game)
+    weights = [2, 1, 2, 1]  # weights for each move
+    while not game_copy.check_game_over():
+        # make a weighted random choice of move
+        move = next_move(game_copy)
+        old_score = game_copy.score
+        old_max = max(max(row) for row in game_copy.grid)
+        game_copy.move(move)
+        new_score = game_copy.score
+        new_max = max(max(row) for row in game_copy.grid)
+        # if the move resulted in a higher score or max value, increase its weight
+        if new_score > old_score or new_max > old_max:
+            weights[move] += 1
+    return game_copy.score, max(max(row) for row in game_copy.grid)
+
+
+def mcts(initial_game):
+    urdl_score = [0, 0, 0, 0]
+
+    for move in range(4):
+        game_copy = copy.deepcopy(initial_game)
+        result, grid = game_copy.move(move)
+
+        if result == 2:
+            continue
+
+        # try random policy for 100 games
+        for i in range(10):
+            priority_output = priority_policy(game_copy)
+            random_output = random_policy(game_copy)
+
+            output = priority_output if priority_output[0] > random_output[0] else random_output
+
+            urdl_score[move] += output[0]
+
+    print(urdl_score)
+
+    best_move_by_score = urdl_score.index(max(urdl_score))
+
+    initial_game.move(best_move_by_score)
+    print(str(initial_game))
+    print("Score: " + str(initial_game.score))
+    print()
+
+
+def monte_carlo_simulation(initial_game):
+    game = copy.deepcopy(initial_game)
+    iterations = 1
+    while not game.check_game_over():
+        mcts(game)
+        iterations += 1
+
+    print("Final State:\n", str(game))
+    print("Score: " + str(game.score))
+    print("Max Tile: " + str(max(max(row) for row in game.grid)))
+    print("Iterations: " + str(iterations))
+
+    return game.score, max(max(row) for row in game.grid), game.grid
+
+
+Sum = 0
+Max = 0
+Max_game = None
+_2prob = 0
+_4prob = 0
+_8prob = 0
+_16prob = 0
+_32prob = 0
+_64prob = 0
+_128prob = 0
+_256prob = 0
+_512prob = 0
+_1024prob = 0
+_2048prob = 0
+_4096prob = 0
 
 init_time = time.time()
 for i in range(1):
