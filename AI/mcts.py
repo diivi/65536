@@ -319,11 +319,13 @@ def mcts(initial_game):
         # try random policy for 100 games
         for i in range(10):
             priority_output = priority_policy(game_copy)
-            random_output = random_policy(game_copy)
+            # random_output = random_policy(game_copy)
 
-            output = priority_output if priority_output[0] > random_output[0] else random_output
+            output = priority_output[0]
+            # output = priority_output
+            # output = priority_output
 
-            urdl_score[move] += output[0]
+            urdl_score[move] += output
 
     print(urdl_score)
 
@@ -348,7 +350,7 @@ def monte_carlo_simulation(initial_game):
     print("Iterations: " + str(iterations))
 
     return game.score, max(max(row) for row in game.grid), game.grid
-
+                
 
 Sum = 0
 Max = 0
@@ -367,7 +369,7 @@ _2048prob = 0
 _4096prob = 0
 
 init_time = time.time()
-for i in range(1):
+for i in range(10):
     game = Game(gui=False)
     (score, max_tile, grid) = monte_carlo_simulation(game)
     Sum += score
